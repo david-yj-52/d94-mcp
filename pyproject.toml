@@ -1,0 +1,29 @@
+[project]
+name = "d94-mcp"
+version = "0.1.0"
+description = "d94 MCP 서버 (DOCS·CIRA 도구, LangChain 워크플로우) + API 토큰 allowlist 동기화"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "mcp>=2.3,<3",
+  "langchain-core>=1.8,<2",
+  "httpx>=0.28,<1",
+  "uvicorn>=0.34,<1",
+  "psycopg[binary]>=3.2,<4",
+  "redis>=5,<9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.8"]
+
+[tool.setuptools]
+packages = ["d94_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
