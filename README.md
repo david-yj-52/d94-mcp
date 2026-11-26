@@ -23,7 +23,7 @@ python3.12 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 GATEWAY_URL=http://localhost:10001 .venv/bin/uvicorn d94_mcp.server:app --port 8095
 ```
 
-delap: `cp .env.example .env` (token-sync 용 DB·Redis) → `docker compose up -d --build`.
+delap `~/data/app/mcp`: `.env` (token-sync 용 DB·Redis) → `docker compose pull && docker compose up -d`. 이미지는 `deploy` push 시 GHCR `latest` 로 발행 (main 은 개발 브랜치 머지용).
 토큰 발급 직후 바로 쓰려면 `docker compose run --rm token-sync python -m d94_mcp.token_sync` 로 1회 동기화.
 
 | 환경 변수 | 기본값 | 대상 |
