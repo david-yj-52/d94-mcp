@@ -11,7 +11,10 @@ token-sync: SN_API_TOKEN ⋈ GS_USER 활성 해시 → AP-02 Redis d94:api-token
 
 | 파일 | 내용 |
 |---|---|
-| `d94_mcp/server.py` | MCP 앱, `/health`, d94-query 호출, DOCS·CIRA 도구 14개 |
+| `d94_mcp/server.py` | MCP 앱 조립, 요청별 Authorization 미들웨어, `/health` |
+| `d94_mcp/client.py` | gateway → d94-query 호출 (토큰 그대로 전달, 401/403/404/409 메시지, 목록 상한 100) |
+| `d94_mcp/docs.py` | DOCS 도구 19개 — 폴더·노트(조회·생성·수정·이동·이력·백링크·파생·계보)·Task |
+| `d94_mcp/cira.py` | CIRA 도구 43개 — 프로젝트·이슈(상태 전이)·댓글·스프린트·보드·마일스톤·버전·위키·사용자 검색 |
 | `d94_mcp/workflows.py` | 같은 도구를 LangChain `StructuredTool` 로 재사용, `workflow_run`/`workflow_status` (25초 넘으면 job_id) |
 | `d94_mcp/token_sync.py` | allowlist 동기화 (`--loop 3600`) |
 | `setup/setup_mcp.py` | 로컬 AI 도구에 MCP 서버 등록 (표준 라이브러리만) |
@@ -66,6 +69,8 @@ python3 setup/setup_mcp.py            # 토큰 입력(화면에 안 보임) → 
 - 새 토큰은 token-sync 주기 때문에 최대 1시간 뒤 통과 (스크립트가 401 로 알려 줌). 등록 후 각 도구를 재시작.
 
 ## 제약
+
+- 삭제 도구와 관리 기능(워크플로우·필드·자동화 규칙 편집, 멤버 권한 변경)은 두지 않는다 — d94-web 에서.
 
 - `uvicorn --workers 1` 고정: workflow job 은 프로세스 메모리에 있고 재시작하면 사라진다.
 - 워크플로우는 LLM 없이 도구를 엮는다(호출하는 AI 가 추론 담당). 서버 쪽 LLM 단계가 필요하면 `build_workflows` 에 Runnable 추가.

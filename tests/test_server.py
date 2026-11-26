@@ -7,6 +7,7 @@ import httpx
 import pytest
 from starlette.testclient import TestClient
 
+from d94_mcp import client as d94_client
 from d94_mcp import server, workflows
 
 TOKEN = "Bearer d94_all_test"
@@ -15,7 +16,7 @@ calls: list[httpx.Request] = []
 
 async def gateway(req: httpx.Request) -> httpx.Response:
     calls.append(req)
-    if req.url.path == "/tsh/api/v1/projects/P1/issues":
+    if req.url.path == "/tsh/api/v1/projects/P1/issues" and req.method == "POST":
         body = json.loads(req.content)
         return httpx.Response(200, json={"success": True, "data": {"id": "I-" + body["title"]}})
     if req.url.path == "/tsh/api/v1/docs/notes" and req.method == "POST":
@@ -25,13 +26,22 @@ async def gateway(req: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"success": True, "data": [
             {"noteId": "N1", "noteTitle": "회의", "lineNo": 3, "text": "a", "status": "todo"},
             {"noteId": "N2", "noteTitle": "x", "lineNo": 1, "text": "skip", "status": "todo"}]})
+    if req.url.path == "/tsh/api/v1/wiki/W1":
+        if req.method == "GET":
+            return httpx.Response(200, json={"data": {"id": "W1", "title": "old title", "content": "old"}})
+        return httpx.Response(200, json={"data": json.loads(req.content)})
+    if req.url.path == "/tsh/api/v1/issues/I1/status":
+        return httpx.Response(200, json={"data": json.loads(req.content)})
+    if req.url.path == "/tsh/api/v1/projects/P1/issues" and req.method == "GET":
+        return httpx.Response(200, json={"data": {"content": [{"id": "I1"}], "totalElements": 1, "number": 0,
+                                                  "size": 20, "pageable": {"junk": 1}}})
     return httpx.Response(404, json={"success": False, "message": "no route"})
 
 
 @pytest.fixture
 def client(monkeypatch):
     calls.clear()
-    monkeypatch.setattr(server, "_http", httpx.AsyncClient(
+    monkeypatch.setattr(d94_client, "_http", httpx.AsyncClient(
         base_url="http://gw/tsh/api/v1", transport=httpx.MockTransport(gateway)))
     monkeypatch.setattr(workflows, "SYNC_WAIT", 0.05)
     # session manager 는 1회용 → 테스트마다 새 앱
@@ -93,3 +103,22 @@ def test_workflow_switches_to_job_and_is_owner_scoped(client):
     assert st["status"] == "done", st
     assert st["result"]["created"] == [{"lineNo": 3, "issueId": "I-a", "title": "a"}]
     assert all(c.headers["authorization"] == TOKEN for c in calls)  # 백그라운드에서도 같은 토큰
+
+
+def test_tool_surface_and_no_delete(client):
+    names = {t["name"] for t in rpc(client, "tools/list")["result"]["tools"]}
+    assert len(names) == len(server.TOOLS) + 2  # + workflow_run/status
+    assert not [n for n in names if "delete" in n or "remove" in n]
+
+
+def test_update_and_paging_shapes(client):
+    err, out = tool(client, "cira_update_wiki_page", {"page_id": "W1", "content": "new"})
+    assert not err and out == {"title": "old title", "content": "new", "sortOrder": None}  # 제목 보존
+
+    err, out = tool(client, "cira_change_issue_status", {"issue_id": "I1", "status_id": "S2"})
+    assert not err and out == {"statusId": "S2"}
+
+    err, out = tool(client, "cira_list_issues", {"project_id": "P1", "status": ["TODO", "DOING"], "limit": 500})
+    assert not err and out == {"items": [{"id": "I1"}], "total": 1, "page": 0, "size": 20}
+    q = calls[-1].url.params
+    assert q.get_list("status") == ["TODO", "DOING"] and q["size"] == "100" and "keyword" not in q
