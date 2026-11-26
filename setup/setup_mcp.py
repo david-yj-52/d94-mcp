@@ -47,6 +47,15 @@ def _antigravity_path(home: Path) -> Path:
     return old if old.exists() and not new.exists() else new
 
 
+def _mcp_remote(url: str, auth: str) -> dict:
+    """GUI 앱은 셸 PATH(nvm 등)를 못 본다 → npx 절대 경로와 그 node 폴더를 PATH 로 넣는다"""
+    npx = shutil.which("npx") or "npx"
+    env = {"D94_AUTH": auth}
+    if os.path.isabs(npx):
+        env["PATH"] = os.pathsep.join([os.path.dirname(npx), "/usr/local/bin", "/usr/bin", "/bin"])
+    return {"command": npx, "args": ["-y", "mcp-remote", url, "--header", "Authorization:${D94_AUTH}"], "env": env}
+
+
 def _toml(headers_key: str):
     return lambda url, auth: (f"url = {json.dumps(url)}\n"
                               f"{headers_key} = {{ \"Authorization\" = {json.dumps(auth)} }}\n")
@@ -60,10 +69,7 @@ CLIENTS = {
     "claude-desktop": {"label": "Claude Desktop (Node 필요: npx mcp-remote)", "kind": "json",
                        "path": _claude_desktop_path, "key": "mcpServers",
                        # 데스크톱 설정은 stdio 만 받는다 → mcp-remote 가 원격 서버로 중계
-                       "entry": lambda url, auth: {"command": "npx",
-                                                   "args": ["-y", "mcp-remote", url,
-                                                            "--header", "Authorization:${D94_AUTH}"],
-                                                   "env": {"D94_AUTH": auth}}},
+                       "entry": lambda url, auth: _mcp_remote(url, auth)},
     "cursor": {"label": "Cursor", "kind": "json", "cli": "cursor-agent",
                "path": lambda h: h / ".cursor/mcp.json", "key": "mcpServers",
                "entry": lambda url, auth: {"url": url, "headers": {"Authorization": auth}}},
@@ -237,7 +243,7 @@ def main() -> None:
         except SystemExit as e:
             failed += 1
             print(e, file=sys.stderr)
-    if not a.remove:
+    if not (a.remove or a.dry_run):
         print("완료. 각 도구를 재시작하면 d94 도구가 보입니다 (기존 파일은 .bak-* 로 백업).")
     sys.exit(1 if failed else 0)
 
