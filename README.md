@@ -36,10 +36,10 @@ delap: `cp .env.example .env` (token-sync 용 DB·Redis) → `docker compose up 
 ## 클라이언트 설정
 
 ```bash
-claude mcp add --transport http d94 https://{UMD_HOST}/mcp --header "Authorization: Bearer d94_mcp_..."
+claude mcp add --transport http d94 https://{UMD_HOST}/mcp --header "Authorization: Bearer d94_all_..."
 ```
 
-- 토큰 서비스: `docs`/`cira` 는 해당 도구만, `mcp` 는 둘 다(워크플로우 포함). READ 토큰으로 쓰기 도구 → 403.
+- 토큰 서비스: `docs`/`cira` 는 해당 도구만, 전역 `all` 은 둘 다(워크플로우 포함). READ 토큰으로 쓰기 도구 → 403.
 - 새 토큰은 token-sync 주기 때문에 UMD 통과까지 최대 1시간.
 
 ## 제약

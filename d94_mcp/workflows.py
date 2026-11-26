@@ -61,7 +61,7 @@ def register(mcp: MCPServer, tool_fns: list, auth_header: ContextVar) -> None:
     async def workflow_run(name: str, input: dict) -> dict:
         """LangChain 워크플로우 실행. 25초 안에 끝나면 {status:done,result}, 넘으면 {status:running,job_id}
         → workflow_status 로 조회. 워크플로우: docs_tasks_to_cira {note_id, project_id, status?}
-        (DOCS·CIRA 둘 다 부르므로 두 서비스를 모두 허용한 토큰이 필요)."""
+        (DOCS·CIRA 둘 다 부르므로 전역(all) 토큰이 필요)."""
         wf = workflows.get(name)
         if wf is None:
             raise ToolError(f"알 수 없는 워크플로우: {name} (가능: {', '.join(workflows)})")

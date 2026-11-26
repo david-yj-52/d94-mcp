@@ -9,7 +9,7 @@ from starlette.testclient import TestClient
 
 from d94_mcp import server, workflows
 
-TOKEN = "Bearer d94_mcp_test"
+TOKEN = "Bearer d94_all_test"
 calls: list[httpx.Request] = []
 
 
@@ -82,7 +82,7 @@ def test_workflow_switches_to_job_and_is_owner_scoped(client):
     assert not err and out["status"] == "running"
     job = out["job_id"]
 
-    err, other = tool(client, "workflow_status", {"job_id": job}, token="Bearer d94_mcp_other")
+    err, other = tool(client, "workflow_status", {"job_id": job}, token="Bearer d94_all_other")
     assert err and "404" in other
 
     for _ in range(50):
