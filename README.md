@@ -14,6 +14,7 @@ token-sync: SN_API_TOKEN ⋈ GS_USER 활성 해시 → AP-02 Redis d94:api-token
 | `d94_mcp/server.py` | MCP 앱, `/health`, d94-query 호출, DOCS·CIRA 도구 14개 |
 | `d94_mcp/workflows.py` | 같은 도구를 LangChain `StructuredTool` 로 재사용, `workflow_run`/`workflow_status` (25초 넘으면 job_id) |
 | `d94_mcp/token_sync.py` | allowlist 동기화 (`--loop 3600`) |
+| `setup/setup_mcp.py` | 로컬 AI 도구에 MCP 서버 등록 (표준 라이브러리만) |
 
 ## 실행
 
@@ -33,14 +34,36 @@ delap `~/data/app/mcp`: `.env` (token-sync 용 DB·Redis) → `docker compose pu
 | `D94_WORKFLOW_SYNC_SECONDS` | `25` | workflow_run 이 동기로 기다리는 시간 |
 | `DB_*`, `REDIS_*` | `.env.example` | token-sync |
 
-## 클라이언트 설정
+## 클라이언트 설정 (로컬 PC)
 
 ```bash
-claude mcp add --transport http d94 https://{UMD_HOST}/mcp --header "Authorization: Bearer d94_all_..."
+git clone https://github.com/david-yj-52/d94-mcp.git && cd d94-mcp
+python3 setup/setup_mcp.py            # 토큰 입력(화면에 안 보임) → 서버 확인 → 설치된 AI 도구에 등록
 ```
 
-- 토큰 서비스: `docs`/`cira` 는 해당 도구만, 전역 `all` 은 둘 다(워크플로우 포함). READ 토큰으로 쓰기 도구 → 403.
-- 새 토큰은 token-sync 주기 때문에 UMD 통과까지 최대 1시간.
+| 옵션 | 내용 |
+|---|---|
+| `--clients codex,gemini` / `all` | 대상 지정. 생략하면 설치된 도구만 (CLI 가 PATH 에 있거나 설정 폴더가 있음) |
+| `--remove` | 등록 해제 |
+| `--dry-run`, `-y` | 미리 보기 / 확인 없이 진행 |
+| `--url`, `--name` | 기본 `https://api.tongsung.site/mcp`, `d94` |
+| `D94_MCP_TOKEN` | 토큰을 환경 변수로 (자동화용) |
+
+| 도구 | 등록 위치 |
+|---|---|
+| Claude Code | `claude mcp add --scope user` (CLI 없으면 `~/.claude.json`) |
+| Claude Desktop | `claude_desktop_config.json` — 원격 서버는 `npx mcp-remote` 로 중계 (Node 필요) |
+| Cursor | `~/.cursor/mcp.json` |
+| Gemini CLI | `~/.gemini/settings.json` (`httpUrl`). 신뢰하지 않은 폴더에서는 Gemini 가 MCP 를 끈다 → 폴더 trust 필요 |
+| Antigravity | `~/.gemini/config/mcp_config.json` (`serverUrl`) |
+| Codex CLI | `~/.codex/config.toml` `[mcp_servers.d94]` (`http_headers`) |
+| Grok CLI | `~/.grok/config.toml` `[mcp_servers.d94]` (`headers`) |
+| OpenCode | `~/.config/opencode/opencode.json` (`mcp.d94`, `type: remote`) |
+
+- 기존 설정은 다른 항목을 보존한 채 `d94` 항목만 추가·교체하고, 바꾸기 전 `.bak-<시각>` 으로 백업한다. 다시 실행하면 같은 항목을 덮어쓴다 (토큰 교체도 같은 명령).
+- 주석이 든 JSON 처럼 읽을 수 없는 파일은 건드리지 않고 알려 준다. 새로 만드는 파일은 권한 600 (토큰이 들어 있음).
+- 토큰: d94-web 설정 > API 토큰. `docs`/`cira` 는 해당 도구만, 전역 `all` 은 둘 다(워크플로우 포함). READ 토큰으로 쓰기 도구 → 403.
+- 새 토큰은 token-sync 주기 때문에 최대 1시간 뒤 통과 (스크립트가 401 로 알려 줌). 등록 후 각 도구를 재시작.
 
 ## 제약
 
